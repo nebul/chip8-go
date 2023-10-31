@@ -40,8 +40,8 @@ func main() {
 
 		}
 	}
-	//chip8Core.Stop()
-	//clock.Stop()
+	chip8Core.Stop()
+	clock.Stop()
 	//display.Stop()
 	//input.Stop()
 }
