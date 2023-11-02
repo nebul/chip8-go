@@ -17,11 +17,7 @@ type ClearScreen struct {
 }
 
 func (instruction *ClearScreen) Execute(core *Chip8Core) {
-	for y := 0; y < len(core.Screen); y++ {
-		for x := 0; x < len(core.Screen[y]); x++ {
-			core.Screen[y][x] = false
-		}
-	}
+	core.ClearScreen()
 }
 
 type ReturnFromSubroutine struct {

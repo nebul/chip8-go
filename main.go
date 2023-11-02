@@ -1,47 +1,91 @@
 package main
 
+import {	
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
+	"image"
+	"image/color"
+	"image/draw"
+)
+
 func main() {
 
-	// Initialize components
 	chip8Core := NewChip8Core()
 	opcodeDecoder := NewOpcodeDecoder()
 	clock := NewFixedClock()
-	//display := NewDisplay()
-	//input := NewInput()
+
+	application := app.New()
+	windows := application.NewWindow("Chip-8 Emulator")
+	windows.Resize(fyne.NewSize(640, 320))
+
+	displayCanvas := canvas.NewRaster(func(w, h int) image.Image {
+		pixel := image.NewNRGBA(image.Rect(0, 0, 64*10, 32*10))
+		for y := 0; y < 32; y++ {
+			for x := 0; x < 64; x++ {
+				column := color.White
+				if chip8Core.GetPixel(x,y) {
+					column = color.Black
+				}
+				draw.Draw(pixel, image.Rect(x*10, y*10, (x+1)*10, (y+1)*10), &image.Uniform{col}, image.Point{}, draw.Src)
+			}
+		}
+		return pixel
+	})
+
+	window.SetContent(container.NewWithoutLayout(displayCanvas)) 
+
+	windows.Canvas().SetOnTypedKey(func(key *fyne.KeyEvent) {
+		var keyMap = map[fyne.KeyName]byte{
+			fyne.KeyX:      0x0,
+			fyne.Key1:      0x1,
+			fyne.Key2:      0x2,
+			fyne.Key3:      0x3,
+			fyne.KeyQ:      0x4,
+			fyne.KeyW:      0x5,
+			fyne.KeyE:      0x6,
+			fyne.KeyA:      0x7,
+			fyne.KeyS:      0x8,
+			fyne.KeyD:      0x9,
+			fyne.KeyZ:      0xA,
+			fyne.KeyC:      0xB,
+			fyne.Key4:      0xC,
+			fyne.KeyR:      0xD,
+			fyne.KeyF:      0xE,
+			fyne.KeyV:      0xF,
+		}
+		if chipKey, exists := keyMap[key.Name]; exists {
+			chip8Core.SetKey(chipKey, true)
+		}
+	})
+
+	updateDisplay := func() {
+		displayCanvas.Refresh()
+	}
 
 	chip8Core.LoadROM([]byte("roms/PONG"))
 
-	// Start CPU and peripherals
 	chip8Core.Start()
 	clock.Start()
-	//display.Start()
-	//input.Start()
 
-	// Main execution loop
-	for {
-		select {
-		case <-clock.Tick():
-			// Fetch: Retrieve the opcode at the current address from the program counter (PC)
-			opcode := chip8Core.FetchOpcode()
+	go func() {
+		for {
+			select {
+			case <-clock.Tick():
+				opcode := chip8Core.FetchOpcode()
+				instruction := opcodeDecoder.Decode(opcode)
+				instruction.Execute(chip8Core)
+				chip8Core.UpdateTimers()
+				updateDisplay()
 
-			// Decode: Decode the opcode into an instruction
-			instruction := opcodeDecoder.Decode(opcode)
-
-			// Execute: Execute the instruction
-			instruction.Execute(chip8Core)
-
-			// Update: Update the state of the CPU and peripherals
-			chip8Core.UpdateTimers()
-			//display.Draw()
-			//input.Poll()
-
-		default:
-			// Wait for the next tick
-
+			default:
+			}
 		}
-	}
+	}()
+
+	windows.ShowAndRun()
+
 	chip8Core.Stop()
 	clock.Stop()
-	//display.Stop()
-	//input.Stop()
 }
