@@ -3,6 +3,7 @@ package main
 import {	
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas" 
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"image"
@@ -17,8 +18,8 @@ func main() {
 	clock := NewFixedClock()
 
 	application := app.New()
-	windows := application.NewWindow("Chip-8 Emulator")
-	windows.Resize(fyne.NewSize(640, 320))
+	window := application.NewWindow("Chip-8 Emulator")
+	window.Resize(fyne.NewSize(640, 320))
 
 	displayCanvas := canvas.NewRaster(func(w, h int) image.Image {
 		pixel := image.NewNRGBA(image.Rect(0, 0, 64*10, 32*10))
@@ -36,7 +37,7 @@ func main() {
 
 	window.SetContent(container.NewWithoutLayout(displayCanvas)) 
 
-	windows.Canvas().SetOnTypedKey(func(key *fyne.KeyEvent) {
+	window.Canvas().SetOnTypedKey(func(key *fyne.KeyEvent) {
 		var keyMap = map[fyne.KeyName]byte{
 			fyne.KeyX:      0x0,
 			fyne.Key1:      0x1,
@@ -61,7 +62,7 @@ func main() {
 	})
 
 	updateDisplay := func() {
-		displayCanvas.Refresh()
+		window.Canvas().Refresh(displayCanvas)
 	}
 
 	chip8Core.LoadROM([]byte("roms/PONG"))
@@ -84,7 +85,7 @@ func main() {
 		}
 	}()
 
-	windows.ShowAndRun()
+	window.ShowAndRun()
 
 	chip8Core.Stop()
 	clock.Stop()
