@@ -1,23 +1,18 @@
 package main
 
 import (
+	"C"
 	"image"
 	"image/color"
 	"image/draw"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
-	"image"
-	"image/color"
-	"image/draw"
 )
 
 func main() {
-
 	chip8Core := NewChip8Core()
 	opcodeDecoder := NewOpcodeDecoder()
 	clock := NewFixedClock()
@@ -71,7 +66,6 @@ func main() {
 	}
 
 	chip8Core.LoadROM([]byte("roms/PONG"))
-
 	chip8Core.Start()
 	clock.Start()
 
@@ -82,6 +76,7 @@ func main() {
 				opcode := chip8Core.FetchOpcode()
 				instruction := opcodeDecoder.Decode(opcode)
 				instruction.Execute(chip8Core)
+
 				chip8Core.UpdateTimers()
 				updateDisplay()
 
@@ -90,8 +85,8 @@ func main() {
 		}
 	}()
 
-	window.ShowAndRun()
+	defer chip8Core.Stop()
+	defer clock.Stop()
 
-	chip8Core.Stop()
-	clock.Stop()
+	window.ShowAndRun()
 }

@@ -10,15 +10,15 @@ func NewOpcodeDecoder() *OpcodeDecoder {
 
 // Decode takes an opcode and returns a corresponding Instruction
 func (opcodeDecoder *OpcodeDecoder) Decode(opcode uint16) Instruction {
-	switch opcode & 0xF000; { // Mask the high nibble to identify the instruction category
+	switch opcode & 0xF000 { // Mask the high nibble to identify the instruction category
 	case 0x0000: // Multi-purpose category, more decoding required
-		switch opcode & 0x00FF; { // Mask the low byte for further decoding
+		switch opcode & 0x00FF { // Mask the low byte for further decoding
 		case 0x00E0: // Opcode for clearing the screen
 			return &ClearScreen{GenericInstruction{opcode}}
 		case 0x00EE: // Opcode for returning from subroutine
 			return &ReturnFromSubroutine{GenericInstruction{opcode}}
 		default: // Unrecognized 0x0??? opcode
-			return &UnknownInstruction{opcode}
+			return &UnknownInstruction{GenericInstruction{opcode}}
 		}
 	case 0x1000: // Opcode for jumping to address NNN
 		return &JumpToAddress{GenericInstruction{opcode}}
@@ -35,7 +35,7 @@ func (opcodeDecoder *OpcodeDecoder) Decode(opcode uint16) Instruction {
 	case 0x7000: // Opcode for adding NN to Vx
 		return &AddToVx{GenericInstruction{opcode}}
 	case 0x8000: // Multi-purpose category, more decoding required
-		switch opcode & 0x000F; { // Mask the low nibble for further decoding
+		switch opcode & 0x000F { // Mask the low nibble for further decoding
 		case 0x0000: // Opcode for setting Vx = Vy
 			return &SetVxVy{GenericInstruction{opcode}}
 		case 0x0001: // Opcode for setting Vx = Vx OR Vy
@@ -55,7 +55,7 @@ func (opcodeDecoder *OpcodeDecoder) Decode(opcode uint16) Instruction {
 		case 0x000E: // Opcode for shifting Vx left by 1
 			return &ShiftVxLeft{GenericInstruction{opcode}}
 		default: // Unrecognized 0x8??? opcode
-			return &UnknownInstruction{opcode}
+			return &UnknownInstruction{GenericInstruction{opcode}}
 		}
 	case 0x9000: // Opcode for skipping next instruction if Vx != Vy
 		return &SkipIfVxVyNotEqual{GenericInstruction{opcode}}
@@ -68,16 +68,16 @@ func (opcodeDecoder *OpcodeDecoder) Decode(opcode uint16) Instruction {
 	case 0xD000: // Opcode for drawing a sprite at (Vx, Vy) with width 8 and height N
 		return &DrawSprite{GenericInstruction{opcode}}
 	case 0xE000: // Multi-purpose category, more decoding required
-		switch opcode & 0x00FF; { // Mask the low byte for further decoding
+		switch opcode & 0x00FF { // Mask the low byte for further decoding
 		case 0x009E: // Opcode for skipping next instruction if key with value Vx is pressed
 			return &SkipIfKeyPressed{GenericInstruction{opcode}}
 		case 0x00A1: // Opcode for skipping next instruction if key with value Vx is not pressed
 			return &SkipIfKeyNotPressed{GenericInstruction{opcode}}
 		default: // Unrecognized 0xE??? opcode
-			return &UnknownInstruction{opcode}
+			return &UnknownInstruction{GenericInstruction{opcode}}
 		}
 	case 0xF000: // Multi-purpose category, more decoding required
-		switch opcode & 0x00FF; { // Mask the low byte for further decoding
+		switch opcode & 0x00FF { // Mask the low byte for further decoding
 		case 0x0007: // Opcode for setting Vx = delay timer value
 			return &SetVxDelayTimer{GenericInstruction{opcode}}
 		case 0x000A: // Opcode for waiting for a key press and storing the value in Vx
@@ -93,13 +93,13 @@ func (opcodeDecoder *OpcodeDecoder) Decode(opcode uint16) Instruction {
 		case 0x0033: // Opcode for storing BCD representation of Vx in memory locations I, I+1, and I+2
 			return &StoreBCD{GenericInstruction{opcode}}
 		case 0x0055: // Opcode for storing V0 to Vx in memory starting at location I
-			return &StoreRegisters{GenericInstruction{opcode}}
+			return &Storeregisters{GenericInstruction{opcode}}
 		case 0x0065: // Opcode for filling V0 to Vx with values from memory starting at location I
-			return &FillRegisters{GenericInstruction{opcode}}
+			return &Fillregisters{GenericInstruction{opcode}}
 		default: // Unrecognized 0xF??? opcode
-			return &UnknownInstruction{opcode}
+			return &UnknownInstruction{GenericInstruction{opcode}}
 		}
 	default: // Unrecognized opcode
-		return &UnknownInstruction{opcode} // Default case for unrecognized instructions
+		return &UnknownInstruction{GenericInstruction{opcode}} // Default case for unrecognized instructions
 	}
 }

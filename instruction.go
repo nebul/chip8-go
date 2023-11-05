@@ -409,7 +409,7 @@ type Storeregisters struct {
 func (instruction *Storeregisters) Execute(core *Chip8Core) {
 	x := (instruction.opcode & 0x0F00) >> 8
 	for j := uint16(0); j <= x; j++ {
-		core.Memory[core.GetI()+j] = core.GetRegister(j)
+		core.Memory[core.GetI()+j] = core.GetRegister(uint8(j))
 	}
 	// core.SetI( core.GetI() + x + 1)
 	core.IncrementPC(2)
@@ -422,7 +422,7 @@ type Fillregisters struct {
 func (instruction *Fillregisters) Execute(core *Chip8Core) {
 	x := (instruction.opcode & 0x0F00) >> 8
 	for j := uint16(0); j <= x; j++ {
-		core.SetRegister(j, core.Memory[core.GetI()+j])
+		core.SetRegister(uint8(j), core.Memory[core.GetI()+j])
 	}
 	// core.SetI( core.GetI() + x + 1)
 	core.IncrementPC(2)
