@@ -279,7 +279,7 @@ func (instruction *DrawSprite) Execute(core *Chip8Core) {
 			pixel := spriteData & (0x80 >> column)
 			if pixel != 0 {
 				core.Screen[positionY][positionX] = true
-				if core.Screen[positionY][positionX] == false {
+				if !core.Screen[positionY][positionX] {
 					core.SetRegister(0xF, 1)
 				}
 			}
@@ -294,7 +294,7 @@ type SkipIfKeyPressed struct {
 func (instruction *SkipIfKeyPressed) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
 	key := core.GetRegister(registerIndex)
-	if core.Keys[key] == true {
+	if !core.Keys[key] {
 		core.IncrementPC(4)
 	} else {
 		core.IncrementPC(2)
@@ -308,7 +308,7 @@ type SkipIfKeyNotPressed struct {
 func (instruction *SkipIfKeyNotPressed) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
 	key := core.GetRegister(registerIndex)
-	if core.Keys[key] == false {
+	if !core.Keys[key] {
 		core.IncrementPC(4)
 	} else {
 		core.IncrementPC(2)
@@ -428,7 +428,6 @@ func (instruction *Fillregisters) Execute(core *Chip8Core) {
 	core.IncrementPC(2)
 }
 
-// UnknownInstruction handles any unrecognized opcodes
 type UnknownInstruction struct {
 	GenericInstruction
 }

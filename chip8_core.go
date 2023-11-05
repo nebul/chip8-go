@@ -16,7 +16,6 @@ type Chip8Core struct {
 	SoundTimer byte         // SoundTimer is the sound timer that is decremented at a frequency of 60Hz when it's non-zero.
 }
 
-// NewChip8Core crée une nouvelle instance du cœur Chip-8 et initialise les valeurs par défaut.
 func NewChip8Core() *Chip8Core {
 	chip8Core := &Chip8Core{}
 	sprites := []byte{
@@ -43,25 +42,20 @@ func NewChip8Core() *Chip8Core {
 	return chip8Core
 }
 
-// LoadROM charge une ROM dans la mémoire à partir de l'adresse 0x200
 func (chip8Core *Chip8Core) LoadROM(data []byte) {
 	for i, d := range data {
 		chip8Core.Memory[0x200+i] = d
 	}
 }
 
-// Start démarre le cœur Chip-8
 func (chip8Core *Chip8Core) Start() {}
 
-// Stop arrête le cœur Chip-8
 func (chip8Core *Chip8Core) Stop() {}
 
-// FetchOpcode récupère l'opcode à l'adresse actuelle du compteur de programme
 func (chip8Core *Chip8Core) FetchOpcode() uint16 {
 	return uint16(chip8Core.Memory[chip8Core.PC])<<8 | uint16(chip8Core.Memory[chip8Core.PC+1])
 }
 
-// UpdateTimers met à jour les compteurs de temporisation et de son
 func (chip8Core *Chip8Core) UpdateTimers() {
 	if chip8Core.DelayTimer > 0 {
 		chip8Core.DelayTimer--
@@ -71,57 +65,46 @@ func (chip8Core *Chip8Core) UpdateTimers() {
 	}
 }
 
-// SetKey définit l'état d'une touche spécifiée
 func (chip8Core *Chip8Core) SetKey(index uint8, value bool) {
 	chip8Core.Keys[index] = value
 }
 
-// GetKey retourne l'état d'une touche spécifiée
 func (chip8Core *Chip8Core) GetKey(index uint8) bool {
 	return chip8Core.Keys[index]
 }
 
-// SetPixel définit l'état d'un pixel spécifié
 func (chip8Core *Chip8Core) SetPixel(x uint8, y uint8, value bool) {
 	chip8Core.Screen[y][x] = value
 }
 
-// GetPixel retourne l'état d'un pixel spécifié
 func (chip8Core *Chip8Core) GetPixel(x uint8, y uint8) bool {
 	return chip8Core.Screen[y][x]
 }
 
-// SetRegister définit la valeur d'un registre spécifié
 func (chip8Core *Chip8Core) SetRegister(index uint8, value byte) {
 	chip8Core.V[index] = value
 }
 
-// GetRegister retourne la valeur d'un registre spécifié
 func (chip8Core *Chip8Core) GetRegister(index uint8) byte {
 	return chip8Core.V[index]
 }
 
-// SetI définit la valeur du registre d'index
 func (chip8Core *Chip8Core) SetI(value uint16) {
 	chip8Core.I = value
 }
 
-// GetI retourne la valeur du registre d'index
 func (chip8Core *Chip8Core) GetI() uint16 {
 	return chip8Core.I
 }
 
-// IncrementPC incrémente le compteur de programme
 func (chip8Core *Chip8Core) IncrementPC(value uint16) {
 	chip8Core.PC += value
 }
 
-// GetPC retourne la valeur du compteur de programme
 func (chip8Core *Chip8Core) SetPC(value uint16) {
 	chip8Core.PC = value
 }
 
-// GetPC retourne la valeur du compteur de programme
 func (chip8Core *Chip8Core) GetPC() uint16 {
 	return chip8Core.PC
 }
@@ -130,19 +113,16 @@ func (chip8Core *Chip8Core) GetSP() uint16 {
 	return chip8Core.SP
 }
 
-// PushStack pousse une valeur sur la pile
 func (chip8Core *Chip8Core) PushStack(value uint16) {
 	chip8Core.Stack[chip8Core.SP] = value
 	chip8Core.SP++
 }
 
-// PopStack sort une valeur de la pile
 func (chip8Core *Chip8Core) PopStack() uint16 {
 	chip8Core.SP--
 	return chip8Core.Stack[chip8Core.SP]
 }
 
-// ClearScreen efface l'écran
 func (chip8Core *Chip8Core) ClearScreen() {
 	for i := 0; i < 32; i++ {
 		for j := 0; j < 64; j++ {

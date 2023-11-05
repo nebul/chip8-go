@@ -29,7 +29,7 @@ func (fixedClock *FixedClock) Start() {
 			case <-fixedClock.done:
 				return
 			case <-fixedClock.ticker.C:
-				// Tick event, to be handled in emulator's main loop
+				// Tick event
 			}
 		}
 	}()
