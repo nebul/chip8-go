@@ -1,92 +1,89 @@
 package main
 
 import (
-	"C"
-	"image"
-	"image/color"
-	"image/draw"
+	"fmt"
+	"os"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
+	"github.com/veandco/go-sdl2/sdl"
 )
 
 func main() {
+
+	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
+		panic(err)
+	}
+	defer sdl.Quit()
+
+	window, err := sdl.CreateWindow("CHIP-8", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, 640, 320, sdl.WINDOW_SHOWN)
+	if err != nil {
+		panic(err)
+	}
+	defer window.Destroy()
+
+	renderer, err := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
+	if err != nil {
+		panic(err)
+	}
+	defer renderer.Destroy()
+
 	chip8Core := NewChip8Core()
 	opcodeDecoder := NewOpcodeDecoder()
 	clock := NewFixedClock()
 
-	application := app.New()
-	window := application.NewWindow("Chip-8 Emulator")
-	window.Resize(fyne.NewSize(640, 320))
-
-	displayCanvas := canvas.NewRaster(func(w, h int) image.Image {
-		pixel := image.NewNRGBA(image.Rect(0, 0, 64*10, 32*10))
-		for y := 0; y < 32; y++ {
-			for x := 0; x < 64; x++ {
-				column := color.White
-				if chip8Core.GetPixel(uint8(x), uint8(y)) {
-					column = color.Black
-				}
-				draw.Draw(pixel, image.Rect(x*10, y*10, (x+1)*10, (y+1)*10), &image.Uniform{column}, image.Point{}, draw.Src)
-			}
-		}
-		return pixel
-	})
-
-	window.SetContent(container.NewWithoutLayout(displayCanvas))
-
-	window.Canvas().SetOnTypedKey(func(key *fyne.KeyEvent) {
-		var keyMap = map[fyne.KeyName]byte{
-			fyne.KeyX: 0x0,
-			fyne.Key1: 0x1,
-			fyne.Key2: 0x2,
-			fyne.Key3: 0x3,
-			fyne.KeyQ: 0x4,
-			fyne.KeyW: 0x5,
-			fyne.KeyE: 0x6,
-			fyne.KeyA: 0x7,
-			fyne.KeyS: 0x8,
-			fyne.KeyD: 0x9,
-			fyne.KeyZ: 0xA,
-			fyne.KeyC: 0xB,
-			fyne.Key4: 0xC,
-			fyne.KeyR: 0xD,
-			fyne.KeyF: 0xE,
-			fyne.KeyV: 0xF,
-		}
-		if chipKey, exists := keyMap[key.Name]; exists {
-			chip8Core.SetKey(chipKey, true)
-		}
-	})
-
-	updateDisplay := func() {
-		window.Canvas().Refresh(displayCanvas)
+	// TODO - Improvement Load ROM another way
+	data, err := os.ReadFile("roms/PONG")
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
 	}
 
-	chip8Core.LoadROM([]byte("roms/PONG"))
+	chip8Core.LoadROM(data)
 	chip8Core.Start()
-	clock.Start()
-
-	go func() {
-		for {
-			select {
-			case <-clock.Tick():
-				opcode := chip8Core.FetchOpcode()
-				instruction := opcodeDecoder.Decode(opcode)
-				instruction.Execute(chip8Core)
-
-				chip8Core.UpdateTimers()
-				updateDisplay()
-
-			default:
-			}
-		}
-	}()
-
 	defer chip8Core.Stop()
+
+	clock.Start()
 	defer clock.Stop()
 
-	window.ShowAndRun()
+	running := true
+	for running {
+		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+			switch e := event.(type) {
+			case *sdl.QuitEvent:
+				running = false
+			case *sdl.KeyboardEvent:
+				keyMap := map[sdl.Keycode]uint8{
+					sdl.K_1: 0x1, sdl.K_2: 0x2, sdl.K_3: 0x3, sdl.K_4: 0xC,
+					sdl.K_q: 0x4, sdl.K_w: 0x5, sdl.K_e: 0x6, sdl.K_r: 0xD,
+					sdl.K_a: 0x7, sdl.K_s: 0x8, sdl.K_d: 0x9, sdl.K_f: 0xE,
+					sdl.K_z: 0xA, sdl.K_x: 0x0, sdl.K_c: 0xB, sdl.K_v: 0xF,
+				}
+				if keyIndex, exists := keyMap[e.Keysym.Sym]; exists {
+					chip8Core.SetKey(keyIndex, e.Type == sdl.KEYDOWN)
+				}
+			}
+		}
+		<-clock.Tick()
+		opcode := chip8Core.FetchOpcode()
+		instruction := opcodeDecoder.Decode(opcode)
+		instruction.Execute(chip8Core)
+		chip8Core.UpdateTimers()
+
+		renderer.SetDrawColor(0, 0, 0, 255)
+		renderer.Clear()
+
+		pixelSize := int32(10)
+
+		for positionY := 0; positionY < 32; positionY++ {
+			for positionX := 0; positionX < 64; positionX++ {
+				color := sdl.Color{R: 0, G: 0, B: 0, A: 255}
+				if chip8Core.GetPixel(uint8(positionX), uint8(positionY)) {
+					color = sdl.Color{R: 255, G: 255, B: 255, A: 255}
+				}
+				renderer.SetDrawColor(color.R, color.G, color.B, color.A)
+				rectangle := sdl.Rect{X: int32(positionX) * pixelSize, Y: int32(positionY) * pixelSize, W: pixelSize, H: pixelSize}
+				renderer.FillRect(&rectangle)
+			}
+		}
+		renderer.Present()
+	}
 }

@@ -18,6 +18,7 @@ type ClearScreen struct {
 
 func (instruction *ClearScreen) Execute(core *Chip8Core) {
 	core.ClearScreen()
+	core.IncrementPC(2)
 }
 
 type ReturnFromSubroutine struct {
@@ -29,6 +30,7 @@ func (instruction *ReturnFromSubroutine) Execute(core *Chip8Core) {
 		return
 	}
 	core.SetPC(core.PopStack())
+	core.IncrementPC(2)
 }
 
 type JumpToAddress struct {
@@ -36,7 +38,8 @@ type JumpToAddress struct {
 }
 
 func (instruction *JumpToAddress) Execute(core *Chip8Core) {
-	core.SetPC(instruction.opcode & 0x0FFF)
+	address := instruction.opcode & 0x0FFF
+	core.SetPC(address)
 }
 
 type CallSubroutine struct {
@@ -44,8 +47,9 @@ type CallSubroutine struct {
 }
 
 func (instruction *CallSubroutine) Execute(core *Chip8Core) {
+	address := instruction.opcode & 0x0FFF
 	core.PushStack(core.PC)
-	core.SetPC(instruction.opcode & 0x0FFF)
+	core.SetPC(address)
 }
 
 type SkipIfVxEqual struct {
@@ -54,8 +58,11 @@ type SkipIfVxEqual struct {
 
 func (instruction *SkipIfVxEqual) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	constantValue := uint8(instruction.opcode & 0x00FF)
-	if core.GetRegister(registerIndex) == constantValue {
+	value := uint8(instruction.opcode & 0x00FF)
+	registerValue := core.GetRegister(registerIndex)
+	if registerValue == value {
+		core.IncrementPC(4)
+	} else {
 		core.IncrementPC(2)
 	}
 }
@@ -66,8 +73,11 @@ type SkipIfVxNotEqual struct {
 
 func (instruction *SkipIfVxNotEqual) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	constantValue := uint8(instruction.opcode & 0x00FF)
-	if core.GetRegister(registerIndex) != constantValue {
+	value := uint8(instruction.opcode & 0x00FF)
+	registerValue := core.GetRegister(registerIndex)
+	if registerValue != value {
+		core.IncrementPC(4)
+	} else {
 		core.IncrementPC(2)
 	}
 }
@@ -77,10 +87,13 @@ type SkipIfVxVyEqual struct {
 }
 
 func (instruction *SkipIfVxVyEqual) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-
-	if core.GetRegister(registerIndexX) == core.GetRegister(registerIndexY) {
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	if xRegisterValue == yRegisterValue {
+		core.IncrementPC(4)
+	} else {
 		core.IncrementPC(2)
 	}
 }
@@ -93,6 +106,7 @@ func (instruction *SetVx) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
 	value := uint8(instruction.opcode & 0x00FF)
 	core.SetRegister(registerIndex, value)
+	core.IncrementPC(2)
 }
 
 type AddToVx struct {
@@ -101,8 +115,10 @@ type AddToVx struct {
 
 func (instruction *AddToVx) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	valueToAdd := uint8(instruction.opcode & 0x00FF)
-	core.SetRegister(registerIndex, core.GetRegister(registerIndex)+valueToAdd)
+	value := uint8(instruction.opcode & 0x00FF)
+	registerValue := core.GetRegister(registerIndex)
+	core.SetRegister(registerIndex, registerValue+value)
+	core.IncrementPC(2)
 }
 
 type SetVxVy struct {
@@ -110,9 +126,11 @@ type SetVxVy struct {
 }
 
 func (instruction *SetVxVy) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-	core.SetRegister(registerIndexX, core.GetRegister(registerIndexY))
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	core.SetRegister(xRegisterIndex, yRegisterValue)
+	core.IncrementPC(2)
 }
 
 type SetVxOrVy struct {
@@ -120,9 +138,12 @@ type SetVxOrVy struct {
 }
 
 func (instruction *SetVxOrVy) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-	core.SetRegister(registerIndexX, core.GetRegister(registerIndexX)|core.GetRegister(registerIndexY))
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	core.SetRegister(xRegisterIndex, xRegisterValue|yRegisterValue)
+	core.IncrementPC(2)
 }
 
 type SetVxAndVy struct {
@@ -130,9 +151,12 @@ type SetVxAndVy struct {
 }
 
 func (instruction *SetVxAndVy) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-	core.SetRegister(registerIndexX, core.GetRegister(registerIndexX)&core.GetRegister(registerIndexY))
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	core.SetRegister(xRegisterIndex, xRegisterValue&yRegisterValue)
+	core.IncrementPC(2)
 }
 
 type SetVxXorVy struct {
@@ -140,9 +164,12 @@ type SetVxXorVy struct {
 }
 
 func (instruction *SetVxXorVy) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-	core.SetRegister(registerIndexX, core.GetRegister(registerIndexX)^core.GetRegister(registerIndexY))
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	core.SetRegister(xRegisterIndex, xRegisterValue^yRegisterValue)
+	core.IncrementPC(2)
 }
 
 type AddVyToVx struct {
@@ -150,15 +177,18 @@ type AddVyToVx struct {
 }
 
 func (instruction *AddVyToVx) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-	sum := uint16(core.GetRegister(registerIndexX)) + uint16(core.GetRegister(registerIndexY))
-	if sum > 0xFF {
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	result := xRegisterValue + yRegisterValue
+	if result > 0xFF {
 		core.SetRegister(0xF, 1)
 	} else {
 		core.SetRegister(0xF, 0)
 	}
-	core.SetRegister(registerIndexX, uint8(sum&0xFF))
+	core.SetRegister(xRegisterIndex, uint8(result&0xFF))
+	core.IncrementPC(2)
 }
 
 type SubtractVyFromVx struct {
@@ -166,14 +196,17 @@ type SubtractVyFromVx struct {
 }
 
 func (instruction *SubtractVyFromVx) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-	if core.GetRegister(registerIndexX) >= core.GetRegister(registerIndexY) {
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	if xRegisterValue >= yRegisterValue {
 		core.SetRegister(0xF, 1)
 	} else {
 		core.SetRegister(0xF, 0)
 	}
-	core.SetRegister(registerIndexX, core.GetRegister(registerIndexX)-core.GetRegister(registerIndexY))
+	core.SetRegister(xRegisterIndex, xRegisterValue-yRegisterValue)
+	core.IncrementPC(2)
 }
 
 type ShiftVxRight struct {
@@ -184,6 +217,7 @@ func (instruction *ShiftVxRight) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
 	core.SetRegister(0xF, core.GetRegister(registerIndex)&0x01)
 	core.SetRegister(registerIndex, core.GetRegister(registerIndex)>>1)
+	core.IncrementPC(2)
 }
 
 type SetVxVyMinusVx struct {
@@ -191,16 +225,19 @@ type SetVxVyMinusVx struct {
 }
 
 func (instruction *SetVxVyMinusVx) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-	result := int(core.GetRegister(registerIndexY)) - int(core.GetRegister(registerIndexX))
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+
+	result := yRegisterValue - xRegisterValue
 	if result >= 0 {
 		core.SetRegister(0xF, 1)
 	} else {
 		core.SetRegister(0xF, 0)
-		result += 256
 	}
-	core.SetRegister(registerIndexX, uint8(result&0xFF))
+	core.SetRegister(xRegisterIndex, uint8(result&0xFF))
+	core.IncrementPC(2)
 }
 
 type ShiftVxLeft struct {
@@ -210,8 +247,9 @@ type ShiftVxLeft struct {
 func (instruction *ShiftVxLeft) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
 	originalValue := core.GetRegister(registerIndex)
+	core.SetRegister(0xF, originalValue>>7)
 	core.SetRegister(registerIndex, originalValue<<1)
-	core.SetRegister(0xF, (originalValue&0x80)>>7)
+	core.IncrementPC(2)
 }
 
 type SkipIfVxVyNotEqual struct {
@@ -219,11 +257,11 @@ type SkipIfVxVyNotEqual struct {
 }
 
 func (instruction *SkipIfVxVyNotEqual) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
-	valueVx := core.GetRegister(registerIndexX)
-	valueVy := core.GetRegister(registerIndexY)
-	if valueVx != valueVy {
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	if xRegisterValue != yRegisterValue {
 		core.IncrementPC(4)
 	} else {
 		core.IncrementPC(2)
@@ -235,8 +273,8 @@ type SetI struct {
 }
 
 func (instruction *SetI) Execute(core *Chip8Core) {
-	value := instruction.opcode & 0x0FFF
-	core.SetI(value)
+	iRegisterValue := instruction.opcode & 0x0FFF
+	core.SetI(iRegisterValue)
 	core.IncrementPC(2)
 }
 
@@ -247,7 +285,7 @@ type JumpToAddressPlusV0 struct {
 func (instruction *JumpToAddressPlusV0) Execute(core *Chip8Core) {
 	address := instruction.opcode & 0x0FFF
 	jumpAddress := address + uint16(core.GetRegister(0))
-	core.PC = jumpAddress
+	core.SetPC(jumpAddress)
 }
 
 type SetVxRandom struct {
@@ -257,9 +295,10 @@ type SetVxRandom struct {
 func (instruction *SetVxRandom) Execute(core *Chip8Core) {
 	randomByte := uint8(rand.Intn(256))
 	constant := uint8(instruction.opcode & 0x00FF)
-	result := randomByte & constant
+	randomValue := randomByte & constant
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	core.SetRegister(registerIndex, result)
+	core.SetRegister(registerIndex, randomValue)
+	core.IncrementPC(2)
 }
 
 type DrawSprite struct {
@@ -267,24 +306,29 @@ type DrawSprite struct {
 }
 
 func (instruction *DrawSprite) Execute(core *Chip8Core) {
-	registerIndexX := uint8((instruction.opcode & 0x0F00) >> 8)
-	registerIndexY := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterIndex := uint8((instruction.opcode & 0x0F00) >> 8)
+	yRegisterIndex := uint8((instruction.opcode & 0x00F0) >> 4)
+	xRegisterValue := core.GetRegister(xRegisterIndex)
+	yRegisterValue := core.GetRegister(yRegisterIndex)
+	iRegisterValue := core.GetI()
 	height := instruction.opcode & 0x000F
 	core.SetRegister(0xF, 0)
 	for row := uint16(0); row < height; row++ {
-		spriteData := core.Memory[core.GetI()+row]
+		spriteData := core.Memory[iRegisterValue+row]
 		for column := uint16(0); column < 8; column++ {
-			positionX := (core.GetRegister(registerIndexX) + uint8(column)) % 64
-			positionY := (core.GetRegister(registerIndexY) + uint8(row)) % 32
 			pixel := spriteData & (0x80 >> column)
 			if pixel != 0 {
-				core.Screen[positionY][positionX] = true
-				if !core.Screen[positionY][positionX] {
+				positionX := (xRegisterValue + uint8(column)) % 64
+				positionY := (yRegisterValue + uint8(row)) % 32
+				if !core.GetPixel(positionX, positionY) {
 					core.SetRegister(0xF, 1)
 				}
+				pixel := (core.GetPixel(positionX, positionY) || true) && !(core.GetPixel(positionX, positionY) && true)
+				core.SetPixel(positionX, positionY, pixel)
 			}
 		}
 	}
+	core.IncrementPC(2)
 }
 
 type SkipIfKeyPressed struct {
@@ -294,7 +338,7 @@ type SkipIfKeyPressed struct {
 func (instruction *SkipIfKeyPressed) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
 	key := core.GetRegister(registerIndex)
-	if !core.Keys[key] {
+	if core.Keys[key] {
 		core.IncrementPC(4)
 	} else {
 		core.IncrementPC(2)
@@ -321,7 +365,8 @@ type SetVxDelayTimer struct {
 
 func (instruction *SetVxDelayTimer) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	core.DelayTimer = core.GetRegister(registerIndex)
+	registerValue := core.GetRegister(registerIndex)
+	core.DelayTimer = registerValue
 	core.IncrementPC(2)
 }
 
@@ -332,18 +377,19 @@ type WaitForKeyPress struct {
 func (instruction *WaitForKeyPress) Execute(core *Chip8Core) {
 	keyPressed := false
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	for index, isPressed := range core.Keys {
+	for keyIndex, isPressed := range core.Keys {
 		if isPressed {
-			core.SetRegister(registerIndex, byte(index))
+			core.SetRegister(registerIndex, byte(keyIndex))
 			keyPressed = true
-			core.Keys[index] = false
+			core.Keys[keyIndex] = false
 			break
 		}
 	}
 	if !keyPressed {
 		return
+	} else {
+		core.IncrementPC(2)
 	}
-	core.IncrementPC(2)
 }
 
 type SetDelayTimer struct {
@@ -352,7 +398,8 @@ type SetDelayTimer struct {
 
 func (instruction *SetDelayTimer) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	core.DelayTimer = core.GetRegister(registerIndex)
+	registerValue := core.GetRegister(registerIndex)
+	core.DelayTimer = registerValue
 	core.IncrementPC(2)
 }
 
@@ -362,7 +409,8 @@ type SetSoundTimer struct {
 
 func (instruction *SetSoundTimer) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	core.SoundTimer = core.GetRegister(registerIndex)
+	registerValue := core.GetRegister(registerIndex)
+	core.SoundTimer = registerValue
 	core.IncrementPC(2)
 }
 
@@ -372,7 +420,8 @@ type SetIPlusVx struct {
 
 func (instruction *SetIPlusVx) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	core.SetI(uint16(core.GetRegister(registerIndex)))
+	registerValue := core.GetRegister(registerIndex)
+	core.SetI(uint16(registerValue))
 	core.IncrementPC(2)
 }
 
@@ -382,7 +431,8 @@ type SetISprite struct {
 
 func (instruction *SetISprite) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	core.SetI(uint16(core.GetRegister(registerIndex) * 5))
+	registerValue := core.GetRegister(registerIndex)
+	core.SetI(uint16(registerValue * 5))
 	core.IncrementPC(2)
 }
 
@@ -392,13 +442,11 @@ type StoreBCD struct {
 
 func (instruction *StoreBCD) Execute(core *Chip8Core) {
 	registerIndex := uint8((instruction.opcode & 0x0F00) >> 8)
-	vx := core.GetRegister(registerIndex)
-	hundreds := vx / 100
-	tens := (vx % 100) / 10
-	ones := vx % 10
-	core.Memory[core.GetI()] = hundreds
-	core.Memory[core.GetI()+1] = tens
-	core.Memory[core.GetI()+2] = ones
+	registerValue := core.GetRegister(registerIndex)
+	iRegisterValue := core.GetI()
+	core.Memory[iRegisterValue] = registerValue / 10
+	core.Memory[iRegisterValue+1] = (registerValue / 10) % 10
+	core.Memory[iRegisterValue+2] = (registerValue / 100) % 10
 	core.IncrementPC(2)
 }
 
@@ -407,11 +455,13 @@ type Storeregisters struct {
 }
 
 func (instruction *Storeregisters) Execute(core *Chip8Core) {
-	x := (instruction.opcode & 0x0F00) >> 8
-	for j := uint16(0); j <= x; j++ {
-		core.Memory[core.GetI()+j] = core.GetRegister(uint8(j))
+	registersNumber := (instruction.opcode & 0x0F00) >> 8
+	iRegisterValue := core.GetI()
+
+	for registerIndex := uint16(0); registerIndex <= registersNumber; registerIndex++ {
+		core.Memory[iRegisterValue+registerIndex] = core.GetRegister(uint8(registerIndex))
 	}
-	// core.SetI( core.GetI() + x + 1)
+	core.SetI(iRegisterValue + registersNumber + 1)
 	core.IncrementPC(2)
 }
 
@@ -420,11 +470,13 @@ type Fillregisters struct {
 }
 
 func (instruction *Fillregisters) Execute(core *Chip8Core) {
-	x := (instruction.opcode & 0x0F00) >> 8
-	for j := uint16(0); j <= x; j++ {
-		core.SetRegister(uint8(j), core.Memory[core.GetI()+j])
+	registersNumber := (instruction.opcode & 0x0F00) >> 8
+	iRegisterValue := core.GetI()
+
+	for registerIndex := uint16(0); registerIndex <= registersNumber; registerIndex++ {
+		core.SetRegister(uint8(registerIndex), core.Memory[iRegisterValue+registerIndex])
 	}
-	// core.SetI( core.GetI() + x + 1)
+	core.SetI(iRegisterValue + registersNumber + 1)
 	core.IncrementPC(2)
 }
 
